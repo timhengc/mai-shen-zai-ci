@@ -24,7 +24,7 @@ MENU = '''麦门封神榜
 请选择要制作的内容：
   1. 麦门年报（annual-report）：真实订单回顾 + 最终门派身份
   2. 麦门名片（identity-card）：昵称、门派、境界和身份纹章
-  3. 专属头像（avatar）：纯代码 SVG + PNG；可选 AI 创作简报
+  3. 专属头像（avatar）：直接输出同一等级人物 PNG；可选 AI 创作简报
   4. 全套视觉（all）：同一数据快照生成以上三件套
 选择功能后，请提供可选的性别称谓：男 / 女；跳过默认男。
 示例：PYTHONPATH=src python3 -m mcd_life_kit.cli all --gender male
@@ -75,10 +75,10 @@ def cmd_visual(args: argparse.Namespace) -> int:
     (output / f'{artifact_stem("report-data",args.file_suffix)}.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
     kinds = ['annual-report', 'identity-card', 'avatar'] if args.command == 'all' else [args.command]
     for kind in kinds:
+        image = Path(args.portrait_image) if args.portrait_image else None
         if kind == 'annual-report':
-            paths = generate_report(report, output, display_name, png=not args.html_only, file_suffix=args.file_suffix)
+            paths = generate_report(report, output, display_name, png=not args.html_only, file_suffix=args.file_suffix, portrait_image=image)
         else:
-            image = Path(args.portrait_image) if kind == 'identity-card' and args.portrait_image else None
             paths = generate_visual(report, output, display_name, kind, png=not args.html_only, ai_brief=args.ai_avatar_brief, portrait_image=image, file_suffix=args.file_suffix)
         for path in paths:
             if path:
@@ -96,7 +96,7 @@ def build_parser() -> argparse.ArgumentParser:
     setup = sub.add_parser('setup', help='展示官方入口二维码、链接和 Token 申请教程')
     setup.add_argument('--output', default=str(_ROOT / 'out/setup'))
     setup.set_defaults(func=cmd_setup)
-    for name, desc in [('annual-report', '麦门年报'), ('identity-card', '麦门名片'), ('avatar', '专属代码头像'), ('all', '同一快照的视觉三件套')]:
+    for name, desc in [('annual-report', '麦门年报'), ('identity-card', '麦门名片'), ('avatar', '专属头像'), ('all', '同一快照的视觉三件套')]:
         command = sub.add_parser(name, help=desc)
         command.add_argument('--year', type=int, default=datetime.now(CST).year)
         command.add_argument('--nickname', default=None, help='明确指定显示名；默认取接口账号名，未返回则不显示')
@@ -108,13 +108,10 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument('--token-stdin', action='store_true', help='从隐藏终端输入或标准输入读取 Token，仅本次使用，不自动保存')
         command.add_argument('--mock-data', default=None)
         command.add_argument('--output', default=None, help='默认 out/<功能名>；全套默认 out/maimen')
-        command.add_argument('--html-only', action='store_true', help='无需 Node.js；头像仍提供 SVG')
+        command.add_argument('--html-only', action='store_true', help='跳过页面截图，无需 Node.js；头像仍直接复制原始人物图片')
         command.add_argument('--max-pages', type=int, default=30)
         command.add_argument('--mcp-args', default='{}')
-        if name in {'identity-card', 'all'}:
-            command.add_argument('--portrait-image', default=None, help='将指定本地人物 PNG/JPEG/WebP 内嵌到名片')
-        else:
-            command.set_defaults(portrait_image=None)
+        command.add_argument('--portrait-image', default=None, help='覆盖自动选图；年报、名片、头像共用指定的本地 PNG/JPEG/WebP')
         if name in {'avatar', 'all'}:
             command.add_argument('--ai-avatar-brief', action='store_true', help='额外输出生图简报，不自动调用或假装完成模型生图')
         else:

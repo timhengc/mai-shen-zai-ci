@@ -236,24 +236,24 @@ def artifact_stem(kind: str, suffix: str = "") -> str:
     return f"{kind}_{suffix}" if suffix else kind
 
 
-def render_html(report: dict, nickname: str | None = None, png_name: str = "annual-report.png") -> str:
-    from .visuals import avatar_svg
+def render_html(report: dict, nickname: str | None = None, png_name: str = "annual-report.png", portrait_image: Path | None = None) -> str:
+    from .portraits import portrait_html
     template = (Path(__file__).parent / "templates" / "annual_report.html").read_text(encoding="utf-8")
     # JSON 位于 script 中；转义 < 防止昵称或餐品名突破 script 标签。
     data = dict(report, identity=report.get("identity") or make_identity(report), nickname=nickname or "", png_name=png_name)
     encoded = json.dumps(data, ensure_ascii=False).replace("<", "\\u003c").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
     replacements = {"__REPORT_JSON__": encoded, "__REPORT_TITLE__": html.escape(f"{report['year']} 麦门年报"),
-                    "__IDENTITY_AVATAR__": avatar_svg(data['identity'], nickname)}
+                    "__IDENTITY_AVATAR__": portrait_html(data['identity'], nickname, portrait_image)}
     return re.sub('|'.join(map(re.escape, replacements)), lambda match: replacements[match[0]], template)
 
 
-def generate_report(report: dict, output: Path, nickname: str | None = None, png: bool = True, file_suffix: str = "") -> tuple[Path, Path | None]:
+def generate_report(report: dict, output: Path, nickname: str | None = None, png: bool = True, file_suffix: str = "", portrait_image: Path | None = None) -> tuple[Path, Path | None]:
     if "identity" not in report:
         report = dict(report, identity=make_identity(report))
     output.mkdir(parents=True, exist_ok=True)
     stem = artifact_stem("annual-report", file_suffix)
     html_path = output / f"{stem}.html"
-    html_path.write_text(render_html(report, nickname, f"{stem}.png" if png else ""), encoding="utf-8")
+    html_path.write_text(render_html(report, nickname, f"{stem}.png" if png else "", portrait_image), encoding="utf-8")
     (output / f"{artifact_stem('report-data', file_suffix)}.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     png_path = output / f"{stem}.png"
     if png:

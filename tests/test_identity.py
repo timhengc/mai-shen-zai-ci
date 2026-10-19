@@ -3,14 +3,16 @@ import io
 import json
 import tempfile
 import unittest
-import xml.etree.ElementTree as ET
+import base64
+import re
 from pathlib import Path
 from unittest.mock import patch
 
 from mcd_life_kit.annual_report import render_html, summarize
 from mcd_life_kit.cli import main
 from mcd_life_kit.identity import RULES, make_identity, resolve_gender, taste_scores
-from mcd_life_kit.visuals import avatar_svg, generate_visual
+from mcd_life_kit.visuals import generate_visual, render_visual
+from mcd_life_kit.portraits import portrait_path
 
 
 def base():
@@ -91,13 +93,36 @@ class IdentityTests(unittest.TestCase):
         identity = make_identity(dict(base(), taste_scores=scores))
         self.assertEqual(identity['sect'], '薯山剑派')
 
-    def test_svg_deterministic_valid_and_escaped(self):
-        identity = make_identity(base(), 'female')
-        svg = avatar_svg(identity, '</title><script>alert(1)</script>')
-        self.assertEqual(svg, avatar_svg(identity, '</title><script>alert(1)</script>'))
-        ET.fromstring(svg)
-        self.assertNotIn('<script>', svg)
-        self.assertNotEqual(svg, avatar_svg(identity, 'another nickname'))
+    def test_all_ranks_share_exact_portrait_and_avatar_original(self):
+        for gender in ['male', 'female']:
+            for tier in RULES['tiers']:
+                report = base()
+                report['identity'] = dict(make_identity(report, gender), level=tier['level'])
+                source = portrait_path(report['identity'])
+                self.assertEqual(source.parent.name, f'{gender}-v1')
+                manifest = json.loads((source.parent/'manifest.json').read_text())
+                self.assertEqual(source.name, next(row['file'] for row in manifest['images'] if row['level']==tier['level']))
+                expected = source.read_bytes()
+                for page in [render_html(report), render_visual(report, None, 'identity-card'), render_visual(report, None, 'avatar')]:
+                    encoded = re.search(r'class="character-image" src="data:image/png;base64,([^"]+)"', page)[1]
+                    self.assertEqual(base64.b64decode(encoded), expected)
+                with tempfile.TemporaryDirectory() as tmp:
+                    with patch('mcd_life_kit.visuals.subprocess.run', side_effect=AssertionError('avatar must not need screenshot')):
+                        _, image = generate_visual(report, Path(tmp), None, 'avatar')
+                    self.assertEqual(image.read_bytes(), expected)
+
+    def test_custom_portrait_shared_by_entire_cli_export(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = portrait_path(make_identity(base(), 'female'))
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(main(['all', '--mock', '--year', '2026', '--html-only', '--output', tmp,
+                                       '--portrait-image', str(source), '--file-suffix', 'shared']), 0)
+            for kind in ['annual-report', 'identity-card', 'avatar']:
+                page = (Path(tmp)/f'{kind}_shared.html').read_text()
+                encoded = re.search(r'class="character-image" src="data:image/png;base64,([^"]+)"', page)[1]
+                self.assertEqual(base64.b64decode(encoded), source.read_bytes())
+            self.assertEqual((Path(tmp)/'avatar_shared.png').read_bytes(), source.read_bytes())
+            self.assertFalse((Path(tmp)/'avatar_shared.svg').exists())
 
     def test_placeholder_text_cannot_break_generated_page(self):
         report = base()
@@ -109,7 +134,7 @@ class IdentityTests(unittest.TestCase):
         self.assertEqual(json.loads(data)['nickname'], nickname)
         card = render_visual(report, nickname, 'identity-card')
         self.assertIn('__CARD_AVATAR__&lt;/script&gt;', card)
-        self.assertEqual(card.count('<svg '), 1)
+        self.assertEqual(card.count('class="character-image"'), 1)
 
     def test_shared_identity_and_optional_ai_only_brief(self):
         report = base()

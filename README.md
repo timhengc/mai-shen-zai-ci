@@ -10,10 +10,10 @@
 | --- | --- | --- |
 | 麦门年报 | 动画 HTML + 1080px 宽 PNG 长图 | 消费回顾、口味排行、月份节拍、最终门派身份与角色 |
 | 麦门名片 | HTML + PNG | 门派、称号、境界、个人纹章、数据依据 |
-| 专属头像 | HTML + SVG + PNG | 同一个身份对应的原创代码角色，按境界变化冠饰、光环与星纹 |
+| 专属头像 | HTML + PNG 原图 | 直接输出与年报、名片相同的等级人物图，保留原始尺寸 |
 | AI 头像扩展 | 可选生图简报 | 仅明确选择后使用 Agent 的生图能力；不影响核心功能 |
 
-项目只做身份视觉创作，不提供餐饮决策或交易功能。默认汉堡插画、角色、纹章为代码绘制，不表示官方餐品图片或会员等级。人物衣服保留小巧的金黄色麦当劳双拱门 M 胸标；后续模型头像沿用简约粗黑线红黄涂鸦风，不做 OK 手势。
+项目只做身份视觉创作，不提供餐饮决策或交易功能。版式、汉堡插画、纹章为代码绘制，人物使用已打包的男女等级图，不表示官方餐品图片或会员等级。人物衣服保留小巧的金黄色麦当劳双拱门 M 胸标；后续模型头像沿用简约粗黑线红黄涂鸦风，不做 OK 手势。
 
 ## 预置人物图：男女各9个等级
 
@@ -25,7 +25,7 @@
 
 全部素材：[男性9级图鉴](assets/characters/male-v1/README.md) · [女性9级图鉴](assets/characters/female-v1/README.md)。每套含独立 PNG、按等级索引的 `manifest.json` 和完整生成提示词。
 
-制作名片时可通过 `--portrait-image` 选择对应等级的人物图；默认纯代码头像仍可用。预置素材已经生成并随项目提供，使用这些图片无需实时生图。原始参考截图、失败草稿、私人名片、预览和 ZIP 打包产物不纳入仓库。
+年报、名片、头像默认根据同一身份的 `level` 与 `gender` 自动选择同一张人物图，无需手动指定。`--portrait-image` 可统一替换为用户指定的人物图。头像直接复制原图，不添加文字、边框或装饰。预置素材已经生成并随项目提供，使用这些图片无需实时生图。原始参考截图、失败草稿、私人名片、预览和 ZIP 打包产物不纳入仓库。
 
 ## 如何确定身份
 
@@ -95,7 +95,7 @@ PYTHONPATH=src python3 -m mcd_life_kit.cli avatar --gender male
 # 免 Token 的合成数据演示
 npm run visual:demo
 
-# 仅 HTML/SVG，不依赖 Node.js 导出环境
+# 跳过年报和名片截图，不依赖 Node.js；头像仍复制人物原图
 PYTHONPATH=src python3 -m mcd_life_kit.cli all --html-only --mock --year 2026
 
 # 可选：生成头像生图简报；此命令本身不调用模型
@@ -148,9 +148,9 @@ PYTHONPATH=src python3 -m mcd_life_kit.cli annual-report --token-stdin
 
 ## 打开作品
 
-全套默认输出在 `out/maimen/`：`annual-report.html/.png`、`identity-card.html/.png`、`avatar.html/.png/.svg`、`identity.json`、`report-data.json`。单独生成则位于 `out/<功能名>/`。
+全套默认输出在 `out/maimen/`：`annual-report.html/.png`、`identity-card.html/.png`、`avatar.html/.png`、`identity.json`、`report-data.json`。单独生成则位于 `out/<功能名>/`。
 
-HTML 双击后用 Chrome、Edge 或 Safari 打开，全部样式、插画和脚本内嵌，无服务器、CDN 或远程字体依赖。年报支持滚动揭幕、分层视差、数字与图表动画、自动播放、暂停和重看；名片有漂浮与金色流光。系统启用“减少动态效果”时关闭动画。**PNG 和 SVG 是静态图片；动画在 HTML 中播放。** 同目录保留 PNG，HTML 的保存按钮即可下载。
+HTML 双击后用 Chrome、Edge 或 Safari 打开，全部样式、插画和脚本内嵌，无服务器、CDN 或远程字体依赖。年报支持滚动揭幕、分层视差、数字与图表动画、自动播放、暂停和重看；名片有漂浮与金色流光。系统启用“减少动态效果”时关闭动画。**PNG 是静态图片；动画在 HTML 中播放。** 头像 PNG 直接使用对应等级的人物原图（当前素材为1254×1254），年报与名片导出为1080px宽。同目录保留 PNG，HTML 的保存按钮即可下载。
 
 动画参考：[GSAP 动画实践](https://gsap.com/resources/mistakes/)、[Intersection Observer](https://developer.mozilla.org/en-US/docs/Web/API/Intersection_Observer_API)、[Web Animations API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Animations_API)。实现使用浏览器原生能力，不依赖 GSAP。
 
