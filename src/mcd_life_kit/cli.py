@@ -11,9 +11,10 @@ _ROOT = Path(__file__).resolve().parents[2]
 if str(_ROOT / 'src') not in sys.path:
     sys.path.insert(0, str(_ROOT / 'src'))
 
-from mcd_life_kit.annual_report import CST, collect_orders, generate_report, load_env, records, summarize
+from mcd_life_kit.annual_report import CST, artifact_stem, collect_orders, generate_report, load_env, records, summarize
 from mcd_life_kit.identity import make_identity
-from mcd_life_kit.mcp_client import MCPClient, MCPError
+from mcd_life_kit.mcp_client import DEFAULT_ENDPOINT, MCPClient, MCPError, read_token_file
+from mcd_life_kit.profile import choose_display_name, fetch_account_name
 from mcd_life_kit.visuals import generate_visual
 from mcd_life_kit.onboarding import read_session_token, show_setup
 
@@ -35,15 +36,22 @@ def cmd_visual(args: argparse.Namespace) -> int:
         raise ValueError('年份应在 2000 与当前年份之间。')
     if not 1 <= args.max_pages <= 100:
         raise ValueError('--max-pages 应为 1 至 100。')
+    artifact_stem('report', args.file_suffix)
     warnings = []
+    fetched_name = None
     if args.mock:
-        if args.token_stdin:
-            raise ValueError('示例模式无需 Token，请移除 --token-stdin。')
+        if args.token_stdin or args.env_file:
+            raise ValueError('示例模式无需 Token，请移除凭证输入参数。')
         payload = json.loads(Path(args.mock_data or _ROOT / 'examples/mock/orders.json').read_text(encoding='utf-8'))
         orders, _ = records(payload)
     else:
-        load_env()
-        client = MCPClient(token=read_session_token() if args.token_stdin else None)
+        if args.env_file and args.token_stdin:
+            raise ValueError('--env-file 与 --token-stdin 不能同时使用。')
+        if args.env_file:
+            client = MCPClient(token=read_token_file(Path(args.env_file)), endpoint=DEFAULT_ENDPOINT)
+        else:
+            load_env()
+            client = MCPClient(token=read_session_token() if args.token_stdin else None)
         if not client.token:
             show_setup()
             return 2
@@ -51,28 +59,34 @@ def cmd_visual(args: argparse.Namespace) -> int:
         if not isinstance(extra, dict):
             raise ValueError('--mcp-args 必须是 JSON 对象。')
         try:
-            orders, warnings = collect_orders(client, extra, args.max_pages)
+            available = client.list_tools()
+            if args.nickname is None:
+                fetched_name = fetch_account_name(client, available)
+            orders, warnings = collect_orders(client, extra, args.max_pages, available_tools=available)
         except MCPError as exc:
             raise MCPError(str(exc).replace(client.token, '[Token 已隐藏]')) from None
     report = summarize(orders, args.year, demo=args.mock, warnings=warnings)
     report['identity'] = make_identity(report, args.gender)
+    display_name, name_source = choose_display_name(args.nickname, fetched_name, args.nickname_fallback)
+    report['display_name'], report['display_name_source'] = display_name, name_source
     output = Path(args.output or f'out/{args.command if args.command != "all" else "maimen"}')
     output.mkdir(parents=True, exist_ok=True)
-    (output / 'identity.json').write_text(json.dumps(report['identity'], ensure_ascii=False, indent=2), encoding='utf-8')
-    (output / 'report-data.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
+    (output / f'{artifact_stem("identity",args.file_suffix)}.json').write_text(json.dumps(report['identity'], ensure_ascii=False, indent=2), encoding='utf-8')
+    (output / f'{artifact_stem("report-data",args.file_suffix)}.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
     kinds = ['annual-report', 'identity-card', 'avatar'] if args.command == 'all' else [args.command]
     for kind in kinds:
         if kind == 'annual-report':
-            paths = generate_report(report, output, args.nickname, png=not args.html_only)
+            paths = generate_report(report, output, display_name, png=not args.html_only, file_suffix=args.file_suffix)
         else:
             image = Path(args.portrait_image) if kind == 'identity-card' and args.portrait_image else None
-            paths = generate_visual(report, output, args.nickname, kind, png=not args.html_only, ai_brief=args.ai_avatar_brief, portrait_image=image)
+            paths = generate_visual(report, output, display_name, kind, png=not args.html_only, ai_brief=args.ai_avatar_brief, portrait_image=image, file_suffix=args.file_suffix)
         for path in paths:
             if path:
                 print(path.resolve())
     print(f"{'合成示例' if args.mock else '真实 MCP'} · {report['year']} 年可见完成订单 {report['count']} 笔")
     print(f"最终身份：{report['identity']['sect']} · {report['identity']['title']}（{report['identity']['realm']}）")
     print(f"称谓来源：{report['identity']['gender_source']}；本次阅历 {report['identity']['score']} 分；近期记录不代表全年。")
+    print(f"用户名：{display_name or '不显示'}（{name_source}）")
     return 0
 
 
@@ -85,7 +99,10 @@ def build_parser() -> argparse.ArgumentParser:
     for name, desc in [('annual-report', '麦门年报'), ('identity-card', '麦门名片'), ('avatar', '专属代码头像'), ('all', '同一快照的视觉三件套')]:
         command = sub.add_parser(name, help=desc)
         command.add_argument('--year', type=int, default=datetime.now(CST).year)
-        command.add_argument('--nickname', default='麦门同学')
+        command.add_argument('--nickname', default=None, help='明确指定显示名；默认取接口账号名，未返回则不显示')
+        command.add_argument('--nickname-fallback', default=None, help='仅在接口未返回账号名时使用的备用显示名')
+        command.add_argument('--env-file', default=None, help='仅使用指定账号文件的 Token，不回退到其他配置')
+        command.add_argument('--file-suffix', default='', help='输出文件名后缀，例如 dhp → annual-report_dhp.html')
         command.add_argument('--gender', choices=['male', 'female'], default=None, help='可选称谓，省略默认为男；不代表真实外貌')
         command.add_argument('--mock', action='store_true', help='合成示例，不是个人真实记录')
         command.add_argument('--token-stdin', action='store_true', help='从隐藏终端输入或标准输入读取 Token，仅本次使用，不自动保存')

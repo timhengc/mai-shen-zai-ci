@@ -104,6 +104,18 @@ PYTHONPATH=src python3 -m mcd_life_kit.cli avatar --ai-avatar-brief
 
 支持 `--year`（默认当前年）、`--output`（自定义目录）、`--mock-data`（自定义演示 JSON）。CLI 不访问远程生图服务，也不嵌入任何模型密钥。
 
+## 用户名与多账号
+
+年报和名片默认优先使用接口明确返回的本人账号名；如果接口没有账号名，则不显示用户名。不会用账号 ID、手机号或配送联系人冒充用户名，也不会自动补“麦门同学”。用户可用 `--nickname` 明确指定显示名。
+
+```bash
+# 指定账号，取不到账号名时仅本次使用 example，输出文件名也带后缀
+PYTHONPATH=src python3 -m mcd_life_kit.cli annual-report --env-file .env_example --nickname-fallback example --file-suffix example
+PYTHONPATH=src python3 -m mcd_life_kit.cli identity-card --env-file .env_example --nickname-fallback example --file-suffix example
+```
+
+输出例如 `annual-report_example.html/.png`、`identity-card_example.html/.png`。`--env-file` 严格隔离账号，不会在指定文件无效时读取其他凭证。省略 `--nickname-fallback` 时，未知账号名保持隐藏。
+
 ## 首次登录与 Token
 
 先提供 **[官方平台与接入文档](https://open.mcd.cn/mcp)**、入口二维码及下方教程。打开官网，按当前页面提示完成登录，进入控制台激活、同意协议后复制 MCP Token。

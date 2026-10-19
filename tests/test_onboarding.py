@@ -62,12 +62,13 @@ class OnboardingTests(unittest.TestCase):
     def test_chat_token_overrides_configuration_and_is_not_saved(self):
         token = 'session-only-test-token'
         seen = []
-        def collect(client, *args):
+        def collect(client, *args, **kwargs):
             seen.append(client.token)
             return [], []
         with tempfile.TemporaryDirectory() as tmp, \
              patch.dict('os.environ', {'MCD_MCP_TOKEN':'other-configured-token'}, clear=True), \
              patch('mcd_life_kit.cli.load_env'), patch('sys.stdin', io.StringIO(token)), \
+             patch('mcd_life_kit.cli.MCPClient.list_tools', return_value=[]), \
              patch('mcd_life_kit.cli.collect_orders', side_effect=collect), \
              contextlib.redirect_stdout(io.StringIO()) as output:
             self.assertEqual(main(['avatar','--token-stdin','--html-only','--output',tmp]), 0)
@@ -79,6 +80,7 @@ class OnboardingTests(unittest.TestCase):
     def test_upstream_error_cannot_echo_session_token(self):
         token = 'must-hide-test-token'
         with patch('mcd_life_kit.cli.load_env'), patch('sys.stdin', io.StringIO(token)), \
+             patch('mcd_life_kit.cli.MCPClient.list_tools', return_value=[]), \
              patch('mcd_life_kit.cli.collect_orders', side_effect=MCPError('failed: '+token)), \
              contextlib.redirect_stderr(io.StringIO()) as output:
             self.assertEqual(main(['avatar','--token-stdin','--html-only']), 1)

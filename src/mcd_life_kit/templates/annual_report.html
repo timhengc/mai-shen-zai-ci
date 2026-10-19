@@ -74,7 +74,7 @@
  <div class="finale-bottom"><strong>麦门封神榜 · 麦门年报</strong><span>MADE OF YOUR MEMORIES ✳</span></div>
 </section>
 <footer class="report-footer"><p class="source-badge" id="source"></p><details open><summary>这份年报，如何记住你的快乐</summary><p id="method"></p><ul id="notes"></ul></details><div class="footer-line"><span>独立开发参赛作品 · 非麦当劳官方产品<br>本地生成，仅统计已完成订单；无消费排名或人群比较。</span><span id="generated"></span></div></footer>
-<noscript>此年报需要启用 JavaScript 才能显示数据与动画。请在浏览器中打开，或查看同目录的 annual-report.png 静态长图。</noscript>
+<noscript>此年报需要启用 JavaScript 才能显示数据与动画。请在浏览器中打开，或查看同目录的 PNG 静态长图。</noscript>
 </main>
 <nav class="controls" aria-label="年报播放控制"><button class="primary" id="play" aria-pressed="false">▶ 播放年报</button><button id="pause" aria-pressed="false">暂停动效</button><button id="replay">↺ 重看</button><a id="download" download="annual-report.png" href="annual-report.png">↓ 保存长图</a></nav>
 <script id="report-data" type="application/json">__REPORT_JSON__</script>
@@ -84,10 +84,10 @@ const D=JSON.parse(document.getElementById('report-data').textContent),$=s=>docu
 const exporting=new URLSearchParams(location.search).has('export'),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 document.documentElement.classList.toggle('static',exporting);document.documentElement.classList.toggle('motion',!exporting&&!reduced);
 const text=(s,v)=>{$(s).textContent=v},num=v=>new Intl.NumberFormat('zh-CN').format(v);
-document.querySelectorAll('[data-field]').forEach(e=>e.textContent=D[e.dataset.field]);
+document.querySelectorAll('[data-field]').forEach(e=>e.textContent=D[e.dataset.field]);$('.nickname').hidden=!D.nickname;
 const I=D.identity;text('#identity-sect',I.sect);text('#identity-title',I.title);text('#identity-level',I.realm+' / REALM '+String(I.level).padStart(2,'0'));text('#identity-motto',I.motto);text('#identity-basis',I.basis);text('#identity-meta',`本次阅历 ${I.score} 分 · ${I.scope} · 规则 v${I.rules_version}`);text('#identity-rule',I.formula);$('#identity-section').dataset.identityTitle=I.title;$('#identity-section').dataset.identitySerial=I.serial;
 document.querySelectorAll('[data-count]').forEach(e=>{e.textContent=num(D[e.dataset.count]);e.dataset.target=D[e.dataset.count]});
-$('#demo-banner').hidden=!D.demo;$('#download').setAttribute('href',D.png_name);$('#download').hidden=!D.png_name;
+$('#demo-banner').hidden=!D.demo;$('#download').setAttribute('href',D.png_name);$('#download').setAttribute('download',D.png_name);$('#download').hidden=!D.png_name;
 text('#amount',D.amount===null?'—':'¥'+D.amount.replace(/\.00$/,''));
 text('#amount-label',D.amount===null?'未返回实付金额':D.amount_count===D.count?'已完成订单实付合计（元）':`已知实付小计 · ${D.amount_count}/${D.count} 笔（元）`);
 text('#coverage',D.first?`本次记录范围 ${D.first} — ${D.last} · 以 MCP 返回为限，可能并非全年。`:'所选年份暂无可识别的完成订单；保留空白，等待下一次相遇。');

@@ -7,9 +7,9 @@
 - Server：`https://mcp.mcd.cn`
 - Streamable HTTP + JSON-RPC 2.0；`Authorization: Bearer <环境变量中的 Token>`
 - 配置示例：[mcp-config.example.json](mcp-config.example.json)
-- 实际业务工具：**`order-list`**，只读查询历史订单。
+- 实际业务工具：**`order-list`**，只读查询历史订单；未指定展示名时，也尝试实时 `tools/list` 中可用的本人档案/账号工具读取昵称，当前包括 `query-my-account`。
 
-`query-my-account` 在开发中仅验证过返回字段：它提供积分信息，没有性别字段；产品生成流程不调用它。当前没有已确认可用的本人性别查询工具。联系人信息不等同于本人档案，因此不查询配送地址取性别；缺失时由 Skill 询问可选称谓，跳过默认为男性。
+当前联调的 `query-my-account` 提供积分信息和账号 ID，没有可用昵称或性别字段；它现在作为可选账号名查询尝试的一部分，缺失名称不影响订单报告生成。当前没有已确认可用的本人性别查询工具。联系人信息不等同于本人档案，因此不查询配送地址取性别；缺失时由 Skill 询问可选称谓，跳过默认为男性。
 
 ## 调用流程
 
@@ -17,7 +17,7 @@
 2. 对话 Token 通过 `--token-stdin` 单次使用、不回显、不自动保存；也可从环境变量或 `.env` / `mcd-token.env` 读取 `MCD_MCP_TOKEN`。`tools/list` 读取 `order-list` 的实时 inputSchema，再调用 `tools/call`。
 3. 当前真实联调的 Schema 为 `{"properties": {}, "type": "object"}`，因此参数为 `{}`。接口未来支持分页时按实际 Schema 翻页，重复页或达到上限提示停止。不发明年份或分页参数。
 4. 解析 `success/code/data.list`。工具或业务失败则终止，不伪造报告或替换成示例。
-5. 按 `orderId` 去重、北京时间归年，只统计 `orderStatus` 明确已完成的订单；未知数字状态不猜测。
+5. 仅从本人账号响应中明确的昵称/展示名字段读取用户名；不使用账号 ID、手机号或配送联系人。未返回且用户未指定时，年报与名片隐藏用户名；仅在用户明确提供备用名时使用备用名。按 `orderId` 去重、北京时间归年，只统计 `orderStatus` 明确已完成的订单；未知数字状态不猜测。
 6. `orderProductList` 含 `comboItemList` 时拆成单品，乘以套餐份数，不重复计算父套餐。`realTotalAmount` 按元使用 Decimal 统计；只有明确的分字段才换算，缺失金额不当零。
 7. 聚合完成订单数、活跃月份、全部已知单品种类（不是前五名）与门派关键词份数。[identity.py](src/mcd_life_kit/identity.py) 按 [预设规则](src/mcd_life_kit/identity_rules.json) 得到唯一身份。金额与性别不参与等级。v2.1 使用 `完成订单数×2 + min(月份数,12) + min(单品种类,12)`；同日多单分别计分，订单贡献不封顶，活跃日仅展示。最高等级门槛为160分，男女统一称“麦门真神”；9笔订单的示例36分仍属于扫地僧。
 8. `all` 使用同一次查询、同一个身份和规则版本生成三件套；不让模型另行判定身份。SVG/CSS 角色与纹章依身份确定，Playwright/Chrome 导出 PNG。
@@ -36,3 +36,5 @@
 官方文档与随 Skill 附带的用户教程指引用户在官网完成登录 → 控制台激活 → 同意协议 → 复制 MCP Token；实时登录方式以官网当前页面为准。目前未找到公开 OAuth、设备码登录、扫码回调或自动获取 MCP Token 的开发者流程；核查 `https://mcp.mcd.cn/.well-known/oauth-protected-resource` 与 `/.well-known/oauth-authorization-server` 均返回404。这只是本次可确认的公开能力边界，不代表平台内部没有其他登录实现。
 
 因此官方页面二维码可作为入口，不能冒充可自动回填凭证的授权二维码。当前先展示随 Skill 提供的二维码、官网链接和教程；用户可将 Token 发到 Agent 对话框供本次使用，或写入本地环境变量 / `.env`。教程页可离线生成 `mcd-token.env` 下载（放入项目根目录自动读取，已被 Git 忽略），不发送输入到网络。参考：[官方接入指南](https://github.com/M-China/mcd-mcp-server#1-申请-mcp-token)。
+
+多账号任务使用 `--env-file` 读取单独凭证，不共享或回退到其他账号的 Token；通过 `--file-suffix` 同步生成带后缀的 HTML、PNG 与脱敏统计，避免混淆和覆盖。

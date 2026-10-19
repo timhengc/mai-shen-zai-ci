@@ -150,8 +150,8 @@ def _arguments(schema: dict, overrides: dict, page: int | None = None) -> dict:
     return result
 
 
-def collect_orders(client: MCPClient, overrides: dict | None = None, max_pages: int = 30) -> tuple[list[dict], list[str]]:
-    tools = {tool["name"]: tool for tool in client.list_tools()}
+def collect_orders(client: MCPClient, overrides: dict | None = None, max_pages: int = 30, available_tools: list[dict] | None = None) -> tuple[list[dict], list[str]]:
+    tools = {tool["name"]: tool for tool in (available_tools if available_tools is not None else client.list_tools())}
     if "order-list" not in tools:
         raise MCPError("当前 MCP 未开放 order-list，无法拉取真实历史订单。")
     schema = tools["order-list"].get("inputSchema", {})
@@ -230,25 +230,32 @@ def summarize(raw_orders: list[dict], year: int, *, demo: bool = False, warnings
             "notes": notes}
 
 
-def render_html(report: dict, nickname: str = "麦门同学", png_name: str = "annual-report.png") -> str:
+def artifact_stem(kind: str, suffix: str = "") -> str:
+    if suffix and not re.fullmatch(r"[\w-]+", suffix):
+        raise ValueError("文件后缀仅支持中文、字母、数字、下划线和短横线。")
+    return f"{kind}_{suffix}" if suffix else kind
+
+
+def render_html(report: dict, nickname: str | None = None, png_name: str = "annual-report.png") -> str:
     from .visuals import avatar_svg
     template = (Path(__file__).parent / "templates" / "annual_report.html").read_text(encoding="utf-8")
     # JSON 位于 script 中；转义 < 防止昵称或餐品名突破 script 标签。
-    data = dict(report, identity=report.get("identity") or make_identity(report), nickname=nickname, png_name=png_name)
+    data = dict(report, identity=report.get("identity") or make_identity(report), nickname=nickname or "", png_name=png_name)
     encoded = json.dumps(data, ensure_ascii=False).replace("<", "\\u003c").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
     replacements = {"__REPORT_JSON__": encoded, "__REPORT_TITLE__": html.escape(f"{report['year']} 麦门年报"),
                     "__IDENTITY_AVATAR__": avatar_svg(data['identity'], nickname)}
     return re.sub('|'.join(map(re.escape, replacements)), lambda match: replacements[match[0]], template)
 
 
-def generate_report(report: dict, output: Path, nickname: str = "麦门同学", png: bool = True) -> tuple[Path, Path | None]:
+def generate_report(report: dict, output: Path, nickname: str | None = None, png: bool = True, file_suffix: str = "") -> tuple[Path, Path | None]:
     if "identity" not in report:
         report = dict(report, identity=make_identity(report))
     output.mkdir(parents=True, exist_ok=True)
-    html_path = output / "annual-report.html"
-    html_path.write_text(render_html(report, nickname, "annual-report.png" if png else ""), encoding="utf-8")
-    (output / "report-data.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    png_path = output / "annual-report.png"
+    stem = artifact_stem("annual-report", file_suffix)
+    html_path = output / f"{stem}.html"
+    html_path.write_text(render_html(report, nickname, f"{stem}.png" if png else ""), encoding="utf-8")
+    (output / f"{artifact_stem('report-data', file_suffix)}.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    png_path = output / f"{stem}.png"
     if png:
         try:
             subprocess.run(["node", str(ROOT / "scripts" / "export-report.cjs"), str(html_path.resolve()), str(png_path.resolve())], check=True)

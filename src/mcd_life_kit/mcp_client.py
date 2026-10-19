@@ -7,6 +7,7 @@ import os
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 from typing import Any
 
 DEFAULT_ENDPOINT = "https://mcp.mcd.cn"
@@ -15,6 +16,26 @@ PROTOCOL_VERSION = "2025-06-18"
 
 class MCPError(RuntimeError):
     """MCP 调用失败。"""
+
+
+def read_token_file(path: Path) -> str:
+    """显式账号文件只使用本文件凭证，支持 dotenv 与单行 Token，不回退到其他账号。"""
+    content = path.read_text(encoding="utf-8-sig").strip()
+    token = None
+    recognized = False
+    for line in content.splitlines():
+        key, separator, value = line.strip().partition("=")
+        if separator and key in {"MCD_MCP_TOKEN", "MCDONALDS_MCP_TOKEN"}:
+            recognized = True
+            value = value.strip().strip("\"'")
+            if value:
+                token = value
+                break
+    if not recognized and content and '=' not in content.rstrip('=') and not any(c.isspace() for c in content) and not content.startswith("#"):
+        token = content
+    if not token or any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in token):
+        raise ValueError("指定配置文件中没有有效 Token；请使用 MCD_MCP_TOKEN=... 或单行 Token。")
+    return token
 
 
 class MCPClient:

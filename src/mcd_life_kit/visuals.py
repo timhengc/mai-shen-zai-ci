@@ -10,13 +10,14 @@ import re
 import subprocess
 from pathlib import Path
 
-from .annual_report import ROOT
+from .annual_report import ROOT, artifact_stem
 from .mcp_client import MCPError
 
 
-def avatar_svg(identity: dict, nickname: str) -> str:
+def avatar_svg(identity: dict, nickname: str | None) -> str:
     """同一身份、昵称得到相同的角色；无需图片素材、网络或生图服务。"""
     esc = html.escape
+    nickname = nickname or ""
     level = identity["level"]
     seed = int(hashlib.sha256((identity["serial"] + nickname).encode()).hexdigest()[:8], 16)
     stars = []
@@ -36,7 +37,7 @@ def avatar_svg(identity: dict, nickname: str) -> str:
         'sweet': '<g transform="translate(446 225)" fill="#ffdf7e" fill-opacity=".15" stroke="#ffdf7e" stroke-width="2"><path d="M0 34C-65 -4 -24 -47 0 -18C24 -47 65 -4 0 34Z"/><path d="M0 34V88"/></g>',
         'chicken': '<g transform="translate(445 228) rotate(20)" fill="none" stroke="#ffdf7e" stroke-width="2"><path d="M0 63Q-44 -16 0 -66Q44 -16 0 63ZM0 55V-46M0 25L-17 8M0 3L18 -15M0 -17L-13 -31"/></g>',
     }.get(identity['sect_key'], '')
-    return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-label="{esc(nickname)}的{esc(identity['title'])}代码头像">
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-label="{esc((nickname+'的') if nickname else '')}{esc(identity['title'])}代码头像">
 <title>{esc(identity['sect'])} · {esc(identity['title'])}</title>
 <defs><radialGradient id="sky"><stop stop-color="#df3330"/><stop offset="1" stop-color="#6c121c"/></radialGradient><linearGradient id="gold" x2="0" y2="1"><stop stop-color="#fff0a6"/><stop offset=".5" stop-color="#ffcf25"/><stop offset="1" stop-color="#d99626"/></linearGradient><linearGradient id="robe" x2="1" y2="1"><stop stop-color="#f14b33"/><stop offset="1" stop-color="#9b1524"/></linearGradient></defs>
 <rect width="600" height="600" rx="48" fill="url(#sky)"/>
@@ -64,16 +65,16 @@ def avatar_svg(identity: dict, nickname: str) -> str:
 <text x="300" y="574" text-anchor="middle" fill="#ffda72" font-family="PingFang SC,Microsoft YaHei,sans-serif" font-size="16" letter-spacing="5">{esc(identity['sect'])} · {esc(identity['realm'])}</text></svg>'''
 
 
-def render_visual(report: dict, nickname: str, kind: str, png: bool = True, portrait_image: Path | None = None) -> str:
+def render_visual(report: dict, nickname: str | None, kind: str, png: bool = True, portrait_image: Path | None = None, file_suffix: str = "") -> str:
     identity = report["identity"]
     template = (Path(__file__).parent / 'templates' / 'identity.html').read_text(encoding='utf-8')
     values = {"TITLE": '麦门名片' if kind == 'identity-card' else '专属代码头像', "KIND": kind,
-              "NICKNAME": nickname, "SECT": identity['sect'], "IDENTITY": identity['title'],
+              "NICKNAME": nickname or "", "NICKNAME_HIDDEN": '' if nickname else 'hidden', "SECT": identity['sect'], "IDENTITY": identity['title'],
               "REALM": identity['realm'], "LEVEL": f"{identity['level']:02d}", "MOTTO": identity['motto'],
               "SERIAL": identity['serial'], "BASIS": identity['basis'], "SCORE": str(identity['score']),
               "SCOPE": identity['scope'], "YEAR": str(report['year']), "RULE": identity['formula'],
               "DEMO": '合成示例 · 非真实身份数据' if report['demo'] else '真实 MCP 数据 · 虚构门派设定',
-              "PNG": f'{kind}.png' if png else '', "PORTRAIT_CLASS": 'custom-image' if portrait_image else ''}
+              "PNG": f'{artifact_stem(kind, file_suffix)}.png' if png else '', "PORTRAIT_CLASS": 'custom-image' if portrait_image else ''}
     replacements = {key: html.escape(value, quote=True) for key, value in values.items()}
     svg = avatar_svg(identity, nickname)
     # 每页只保留可见的一个 SVG，避免重复渐变 ID 引用隐藏的 defs。
@@ -86,19 +87,21 @@ def render_visual(report: dict, nickname: str, kind: str, png: bool = True, port
         if not mime:
             raise ValueError('名片人物图片请使用 PNG / JPEG / WebP。')
         encoded = base64.b64encode(portrait_image.read_bytes()).decode('ascii')
-        replacements['CARD_AVATAR'] = f'<img class="character-image" src="data:{mime};base64,{encoded}" alt="{html.escape(nickname,quote=True)}的{html.escape(identity["title"],quote=True)}人物画像">'
+        owner = (nickname + '的') if nickname else ''
+        replacements['CARD_AVATAR'] = f'<img class="character-image" src="data:{mime};base64,{encoded}" alt="{html.escape(owner+identity["title"],quote=True)}人物画像">'
     return re.sub(r'__([A-Z_]+)__', lambda match: replacements[match[1]], template)
 
 
-def generate_visual(report: dict, output: Path, nickname: str, kind: str, png: bool = True, ai_brief: bool = False, portrait_image: Path | None = None) -> tuple[Path, Path | None]:
+def generate_visual(report: dict, output: Path, nickname: str | None, kind: str, png: bool = True, ai_brief: bool = False, portrait_image: Path | None = None, file_suffix: str = "") -> tuple[Path, Path | None]:
     output.mkdir(parents=True, exist_ok=True)
-    html_path, png_path = output / f'{kind}.html', output / f'{kind}.png'
-    html_path.write_text(render_visual(report, nickname, kind, png, portrait_image), encoding='utf-8')
-    (output / 'identity.json').write_text(json.dumps(report['identity'], ensure_ascii=False, indent=2), encoding='utf-8')
+    stem = artifact_stem(kind, file_suffix)
+    html_path, png_path = output / f'{stem}.html', output / f'{stem}.png'
+    html_path.write_text(render_visual(report, nickname, kind, png, portrait_image, file_suffix), encoding='utf-8')
+    (output / f'{artifact_stem("identity", file_suffix)}.json').write_text(json.dumps(report['identity'], ensure_ascii=False, indent=2), encoding='utf-8')
     if kind == 'avatar':
-        (output / 'avatar.svg').write_text(avatar_svg(report['identity'], nickname), encoding='utf-8')
+        (output / f'{stem}.svg').write_text(avatar_svg(report['identity'], nickname), encoding='utf-8')
         if ai_brief:
-            (output / 'avatar-ai-brief.md').write_text(avatar_brief(report['identity']), encoding='utf-8')
+            (output / f'{artifact_stem("avatar-ai-brief", file_suffix)}.md').write_text(avatar_brief(report['identity']), encoding='utf-8')
     if png:
         try:
             subprocess.run(['node', str(ROOT / 'scripts/export-report.cjs'), str(html_path.resolve()), str(png_path.resolve())], check=True)
