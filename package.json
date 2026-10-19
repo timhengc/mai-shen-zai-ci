@@ -2,7 +2,7 @@
   "name": "mai-shen-visual-studio",
   "version": "0.2.0",
   "private": true,
-  "description": "麦门身份视觉工坊：年报、名片和代码头像",
+  "description": "你在麦门算老几？领取你的麦门专属身份",
   "scripts": {
     "test": "PYTHONPATH=src python3 -m unittest discover -s tests -v",
     "test:report": "node scripts/verify-report.cjs",

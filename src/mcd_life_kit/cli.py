@@ -17,7 +17,9 @@ from mcd_life_kit.mcp_client import MCPClient, MCPError
 from mcd_life_kit.visuals import generate_visual
 from mcd_life_kit.onboarding import read_session_token, show_setup
 
-MENU = '''麦神在此 · 麦门身份视觉工坊
+MENU = '''麦门封神榜
+你在麦门算老几？领取你的麦门专属身份
+
 请选择要制作的内容：
   1. 麦门年报（annual-report）：真实订单回顾 + 最终门派身份
   2. 麦门名片（identity-card）：昵称、门派、境界和身份纹章
@@ -75,7 +77,7 @@ def cmd_visual(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog='mcd-life-kit', description='麦神在此 · 麦门身份视觉工坊（年报 / 名片 / 代码头像）')
+    parser = argparse.ArgumentParser(prog='mcd-life-kit', description='麦门封神榜 · 你在麦门算老几？领取你的麦门专属身份')
     sub = parser.add_subparsers(dest='command')
     setup = sub.add_parser('setup', help='展示官方入口二维码、链接和 Token 申请教程')
     setup.add_argument('--output', default=str(_ROOT / 'out/setup'))

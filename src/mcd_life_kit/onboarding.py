@@ -35,6 +35,7 @@ def generate_setup(output: Path) -> Path:
 
 def show_setup(output: Path = ROOT / "out" / "setup") -> Path:
     path = generate_setup(output)
+    print("麦门封神榜 · 你在麦门算老几？领取你的麦门专属身份")
     print("首次使用：先连接麦当劳 MCP")
     print(f"官方登录入口 / 接入文档：{OFFICIAL_URL}")
     print(f"入口二维码：{(ASSETS / 'official-platform-qr.png').resolve()}")

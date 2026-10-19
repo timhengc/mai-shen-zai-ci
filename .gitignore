@@ -18,8 +18,10 @@ out/
 .mcp_token
 mcd-token.env
 node_modules/
-# 人物生成素材、预览和中间文件暂不随代码提交
-assets/characters/
+# 只提交确认版男女角色素材，草稿和预览继续忽略
+assets/characters/*
+!assets/characters/male-v1/
+!assets/characters/female-v1/
 tmp/
 temp/
 *.log
