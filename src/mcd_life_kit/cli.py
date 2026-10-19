@@ -1,89 +1,129 @@
-"""命令行入口。
-
-示例：
-  python -m mcd_life_kit.cli search 巨无霸 --mock
-  python -m mcd_life_kit.cli meal 巨无霸,中薯条,可口可乐 --budget 600 --mock
-"""
-
+"""麦门视觉工坊：首次连接引导、功能选择与视觉生成。"""
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+from datetime import datetime
 from pathlib import Path
 
-# 允许直接 python src/... 运行
 _ROOT = Path(__file__).resolve().parents[2]
-if str(_ROOT / "src") not in sys.path:
-    sys.path.insert(0, str(_ROOT / "src"))
+if str(_ROOT / 'src') not in sys.path:
+    sys.path.insert(0, str(_ROOT / 'src'))
 
-from mcd_life_kit.calorie import CalorieCoach, format_meal, format_search  # noqa: E402
-from mcd_life_kit.mcp_client import MCPError  # noqa: E402
+from mcd_life_kit.annual_report import CST, collect_orders, generate_report, load_env, records, summarize
+from mcd_life_kit.identity import make_identity
+from mcd_life_kit.mcp_client import MCPClient, MCPError
+from mcd_life_kit.visuals import generate_visual
+from mcd_life_kit.onboarding import read_session_token, show_setup
+
+MENU = '''麦神在此 · 麦门身份视觉工坊
+请选择要制作的内容：
+  1. 麦门年报（annual-report）：真实订单回顾 + 最终门派身份
+  2. 麦门名片（identity-card）：昵称、门派、境界和身份纹章
+  3. 专属头像（avatar）：纯代码 SVG + PNG；可选 AI 创作简报
+  4. 全套视觉（all）：同一数据快照生成以上三件套
+选择功能后，请提供可选的性别称谓：男 / 女；跳过默认男。
+示例：PYTHONPATH=src python3 -m mcd_life_kit.cli all --gender male
+'''
 
 
-def _coach(args: argparse.Namespace) -> CalorieCoach:
+def cmd_visual(args: argparse.Namespace) -> int:
+    if not 2000 <= args.year <= datetime.now(CST).year:
+        raise ValueError('年份应在 2000 与当前年份之间。')
+    if not 1 <= args.max_pages <= 100:
+        raise ValueError('--max-pages 应为 1 至 100。')
+    warnings = []
     if args.mock:
-        return CalorieCoach.from_mock(args.mock_data)
-    return CalorieCoach.from_mcp(token=args.token)
-
-
-def cmd_search(args: argparse.Namespace) -> int:
-    coach = _coach(args)
-    foods = coach.search(args.keyword, limit=args.limit)
-    print(format_search(foods))
-    print(f"\n共 {len(foods)} 条（本地目录共 {len(coach.load_foods())} 个餐品）")
+        if args.token_stdin:
+            raise ValueError('示例模式无需 Token，请移除 --token-stdin。')
+        payload = json.loads(Path(args.mock_data or _ROOT / 'examples/mock/orders.json').read_text(encoding='utf-8'))
+        orders, _ = records(payload)
+    else:
+        load_env()
+        client = MCPClient(token=read_session_token() if args.token_stdin else None)
+        if not client.token:
+            show_setup()
+            return 2
+        extra = json.loads(args.mcp_args)
+        if not isinstance(extra, dict):
+            raise ValueError('--mcp-args 必须是 JSON 对象。')
+        try:
+            orders, warnings = collect_orders(client, extra, args.max_pages)
+        except MCPError as exc:
+            raise MCPError(str(exc).replace(client.token, '[Token 已隐藏]')) from None
+    report = summarize(orders, args.year, demo=args.mock, warnings=warnings)
+    report['identity'] = make_identity(report, args.gender)
+    output = Path(args.output or f'out/{args.command if args.command != "all" else "maimen"}')
+    output.mkdir(parents=True, exist_ok=True)
+    (output / 'identity.json').write_text(json.dumps(report['identity'], ensure_ascii=False, indent=2), encoding='utf-8')
+    (output / 'report-data.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
+    kinds = ['annual-report', 'identity-card', 'avatar'] if args.command == 'all' else [args.command]
+    for kind in kinds:
+        if kind == 'annual-report':
+            paths = generate_report(report, output, args.nickname, png=not args.html_only)
+        else:
+            image = Path(args.portrait_image) if kind == 'identity-card' and args.portrait_image else None
+            paths = generate_visual(report, output, args.nickname, kind, png=not args.html_only, ai_brief=args.ai_avatar_brief, portrait_image=image)
+        for path in paths:
+            if path:
+                print(path.resolve())
+    print(f"{'合成示例' if args.mock else '真实 MCP'} · {report['year']} 年可见完成订单 {report['count']} 笔")
+    print(f"最终身份：{report['identity']['sect']} · {report['identity']['title']}（{report['identity']['realm']}）")
+    print(f"称谓来源：{report['identity']['gender_source']}；本次阅历 {report['identity']['score']} 分；近期记录不代表全年。")
     return 0
 
 
-def cmd_meal(args: argparse.Namespace) -> int:
-    coach = _coach(args)
-    specs = [part.strip() for part in args.items.replace("，", ",").split(",") if part.strip()]
-    summary, missing = coach.summarize_meal(specs, budget_kcal=args.budget)
-    print(format_meal(summary, missing))
-    return 0 if not missing else 2
-
-
 def build_parser() -> argparse.ArgumentParser:
-    common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--token", default=None, help="MCP Token（默认读 MCD_MCP_TOKEN）")
-    common.add_argument("--mock", action="store_true", help="使用本地 mock 营养数据，无需 Token")
-    common.add_argument("--mock-data", default=None, help="自定义 mock JSON 路径")
-
-    parser = argparse.ArgumentParser(
-        prog="mcd-life-kit",
-        description="麦麦生活套件 · 当前模块：控卡（营养查询 / 一餐热量核算）",
-        parents=[common],
-    )
-
-    sub = parser.add_subparsers(dest="command", required=True)
-
-    search = sub.add_parser("search", help="按关键字搜索餐品营养", parents=[common])
-    search.add_argument("keyword", help="餐品关键字，如：巨无霸 / 薯条 / 可乐")
-    search.add_argument("--limit", type=int, default=10)
-    search.set_defaults(func=cmd_search)
-
-    meal = sub.add_parser("meal", help="核算一餐热量", parents=[common])
-    meal.add_argument(
-        "items",
-        help="餐品列表，逗号分隔，支持份数：巨无霸,中薯条×2,可口可乐",
-    )
-    meal.add_argument("--budget", type=float, default=None, help="本餐热量预算（kcal）")
-    meal.set_defaults(func=cmd_meal)
-
+    parser = argparse.ArgumentParser(prog='mcd-life-kit', description='麦神在此 · 麦门身份视觉工坊（年报 / 名片 / 代码头像）')
+    sub = parser.add_subparsers(dest='command')
+    setup = sub.add_parser('setup', help='展示官方入口二维码、链接和 Token 申请教程')
+    setup.add_argument('--output', default=str(_ROOT / 'out/setup'))
+    setup.set_defaults(func=cmd_setup)
+    for name, desc in [('annual-report', '麦门年报'), ('identity-card', '麦门名片'), ('avatar', '专属代码头像'), ('all', '同一快照的视觉三件套')]:
+        command = sub.add_parser(name, help=desc)
+        command.add_argument('--year', type=int, default=datetime.now(CST).year)
+        command.add_argument('--nickname', default='麦门同学')
+        command.add_argument('--gender', choices=['male', 'female'], default=None, help='可选称谓，省略默认为男；不代表真实外貌')
+        command.add_argument('--mock', action='store_true', help='合成示例，不是个人真实记录')
+        command.add_argument('--token-stdin', action='store_true', help='从隐藏终端输入或标准输入读取 Token，仅本次使用，不自动保存')
+        command.add_argument('--mock-data', default=None)
+        command.add_argument('--output', default=None, help='默认 out/<功能名>；全套默认 out/maimen')
+        command.add_argument('--html-only', action='store_true', help='无需 Node.js；头像仍提供 SVG')
+        command.add_argument('--max-pages', type=int, default=30)
+        command.add_argument('--mcp-args', default='{}')
+        if name in {'identity-card', 'all'}:
+            command.add_argument('--portrait-image', default=None, help='将指定本地人物 PNG/JPEG/WebP 内嵌到名片')
+        else:
+            command.set_defaults(portrait_image=None)
+        if name in {'avatar', 'all'}:
+            command.add_argument('--ai-avatar-brief', action='store_true', help='额外输出生图简报，不自动调用或假装完成模型生图')
+        else:
+            command.set_defaults(ai_avatar_brief=False)
+        command.set_defaults(func=cmd_visual)
     return parser
 
 
+def cmd_setup(args: argparse.Namespace) -> int:
+    show_setup(Path(args.output))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = build_parser()
-    args = parser.parse_args(argv)
+    args = build_parser().parse_args(argv)
     try:
+        if args.command is None:
+            load_env()
+            if not MCPClient().token:
+                show_setup()
+            else:
+                print(MENU)
+            return 0
         return int(args.func(args))
-    except MCPError as exc:
-        print(f"错误：{exc}", file=sys.stderr)
-        return 1
-    except FileNotFoundError as exc:
-        print(f"错误：找不到文件 {exc.filename}", file=sys.stderr)
+    except (MCPError, ValueError, OSError) as exc:
+        print(f'错误：{exc}', file=sys.stderr)
         return 1
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise SystemExit(main())

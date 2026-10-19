@@ -1,0 +1,28 @@
+{
+  "name": "mai-shen-visual-studio",
+  "version": "0.2.0",
+  "private": true,
+  "description": "麦门身份视觉工坊：年报、名片和代码头像",
+  "scripts": {
+    "test": "PYTHONPATH=src python3 -m unittest discover -s tests -v",
+    "test:report": "node scripts/verify-report.cjs",
+    "report:demo": "PYTHONPATH=src python3 -m mcd_life_kit.cli annual-report --mock --year 2026 --output out/demo",
+    "visual:demo": "PYTHONPATH=src python3 -m mcd_life_kit.cli all --mock --year 2026 --output out/demo",
+    "test:visual": "node scripts/verify-visuals.cjs",
+    "test:setup": "node scripts/verify-setup.cjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timhengc/mai-shen-zai-ci.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/timhengc/mai-shen-zai-ci/issues"
+  },
+  "homepage": "https://github.com/timhengc/mai-shen-zai-ci#readme",
+  "devDependencies": {
+    "playwright": "^1.64.1"
+  }
+}

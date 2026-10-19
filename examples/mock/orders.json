@@ -1,0 +1,129 @@
+{
+  "_notice": "完全合成的示例数据，非真实消费。仅用于离线演示与测试。",
+  "success": true,
+  "code": 200,
+  "data": {
+    "list": [
+      {
+        "orderId": "SYNTHETIC-0",
+        "createTime": "2026-01-06 09:30:00",
+        "orderStatus": "订单已完成",
+        "realTotalAmount": "12.00",
+        "orderProductList": [
+          {
+            "productName": "示例汉堡",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "orderId": "SYNTHETIC-1",
+        "createTime": "2026-02-08 13:30:00",
+        "orderStatus": "订单已完成",
+        "realTotalAmount": "30.00",
+        "orderProductList": [
+          {
+            "productName": "示例小薯条",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "orderId": "SYNTHETIC-2",
+        "createTime": "2026-02-22 13:30:00",
+        "orderStatus": "订单已完成",
+        "realTotalAmount": "20.00",
+        "orderProductList": [
+          {
+            "productName": "示例汉堡",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "orderId": "SYNTHETIC-3",
+        "createTime": "2026-04-02 19:30:00",
+        "orderStatus": "订单已完成",
+        "realTotalAmount": "15.00",
+        "orderProductList": [
+          {
+            "productName": "示例小薯条",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "orderId": "SYNTHETIC-4",
+        "createTime": "2026-04-12 13:30:00",
+        "orderStatus": "订单已完成",
+        "realTotalAmount": "40.00",
+        "orderProductList": [
+          {
+            "productName": "示例可乐",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "orderId": "SYNTHETIC-5",
+        "createTime": "2026-04-25 16:30:00",
+        "orderStatus": "订单已完成",
+        "realTotalAmount": "15.00",
+        "orderProductList": [
+          {
+            "productName": "示例汉堡",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "orderId": "SYNTHETIC-6",
+        "createTime": "2026-07-06 13:30:00",
+        "orderStatus": "订单已完成",
+        "realTotalAmount": "18.00",
+        "orderProductList": [
+          {
+            "productName": "示例小薯条",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "orderId": "SYNTHETIC-7",
+        "createTime": "2026-07-18 19:30:00",
+        "orderStatus": "订单已完成",
+        "realTotalAmount": "32.00",
+        "orderProductList": [
+          {
+            "productName": "示例汉堡",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "orderId": "SYNTHETIC-8",
+        "createTime": "2026-10-02 16:30:00",
+        "orderStatus": "订单已完成",
+        "realTotalAmount": "24.00",
+        "orderProductList": [
+          {
+            "productName": "示例可乐",
+            "quantity": 1
+          }
+        ]
+      },
+      {
+        "orderId": "SYNTHETIC-9",
+        "createTime": "2026-10-08 19:30:00",
+        "orderStatus": "订单已完成",
+        "realTotalAmount": "28.00",
+        "orderProductList": [
+          {
+            "productName": "示例甜品",
+            "quantity": 1
+          }
+        ]
+      }
+    ]
+  }
+}

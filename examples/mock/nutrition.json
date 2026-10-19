@@ -1,4 +1,0 @@
-{
-  "success": true,
-  "data": "[8]{productName,nutritionDescription,energyKj,energyKcal,protein,fat,carbohydrate,sodium,calcium}:\n  巨无霸,null,2280,550,26,33,45,950,180\n  双层吉士汉堡,null,1880,450,26,26,33,1100,260\n  麦香鸡,null,1500,360,15,16,40,780,80\n  板烧鸡腿堡,null,1600,380,20,15,40,820,90\n  中薯条,null,1420,340,4,16,44,270,10\n  麦乐鸡 5块,null,1000,240,13,14,15,520,15\n  可口可乐 中杯,null,580,140,0,0,37,10,0\n  无糖可口可乐 中杯,null,4,1,0,0,0,20,0\n"
-}

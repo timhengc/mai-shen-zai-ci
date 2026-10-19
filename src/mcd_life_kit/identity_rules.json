@@ -1,0 +1,161 @@
+{
+  "version": "2.1",
+  "tiers": [
+    {
+      "level": 0,
+      "minimum": 0,
+      "realm": "初识",
+      "titles": {
+        "male": "麦门新客",
+        "female": "麦门新客"
+      }
+    },
+    {
+      "level": 1,
+      "minimum": 4,
+      "realm": "入门",
+      "titles": {
+        "male": "见习小师弟",
+        "female": "见习小师妹"
+      }
+    },
+    {
+      "level": 2,
+      "minimum": 12,
+      "realm": "修习",
+      "titles": {
+        "male": "藏味扫地僧",
+        "female": "藏味扫地侠"
+      }
+    },
+    {
+      "level": 3,
+      "minimum": 50,
+      "realm": "入室",
+      "titles": {
+        "male": "关门大弟子",
+        "female": "关门大弟子"
+      }
+    },
+    {
+      "level": 4,
+      "minimum": 70,
+      "realm": "宗师",
+      "titles": {
+        "male": "一派掌门",
+        "female": "一派掌门"
+      }
+    },
+    {
+      "level": 5,
+      "minimum": 90,
+      "realm": "出尘",
+      "titles": {
+        "male": "云游散仙",
+        "female": "云游散仙"
+      }
+    },
+    {
+      "level": 6,
+      "minimum": 110,
+      "realm": "登仙",
+      "titles": {
+        "male": "金拱真仙",
+        "female": "金拱真仙"
+      }
+    },
+    {
+      "level": 7,
+      "minimum": 135,
+      "realm": "仙境",
+      "titles": {
+        "male": "赤金仙君",
+        "female": "赤金仙姬"
+      }
+    },
+    {
+      "level": 8,
+      "minimum": 160,
+      "realm": "神境",
+      "titles": {
+        "male": "麦门真神",
+        "female": "麦门真神"
+      }
+    }
+  ],
+  "sects": [
+    {
+      "key": "fries",
+      "name": "薯山剑派",
+      "symbol": "薯",
+      "keywords": [
+        "薯"
+      ],
+      "motto": "金黄出鞘，快乐有招。"
+    },
+    {
+      "key": "burger",
+      "name": "金堡门",
+      "symbol": "堡",
+      "keywords": [
+        "堡",
+        "汉堡"
+      ],
+      "motto": "层层有味，自成一派。"
+    },
+    {
+      "key": "coffee",
+      "name": "麦咖书院",
+      "symbol": "咖",
+      "keywords": [
+        "咖啡",
+        "拿铁",
+        "美式",
+        "卡布奇诺"
+      ],
+      "motto": "一杯清醒，自有章法。"
+    },
+    {
+      "key": "bubble",
+      "name": "气泡宗",
+      "symbol": "泡",
+      "keywords": [
+        "可乐",
+        "雪碧",
+        "芬达",
+        "汽水"
+      ],
+      "motto": "气泡一响，烦恼退场。"
+    },
+    {
+      "key": "sweet",
+      "name": "甜心谷",
+      "symbol": "甜",
+      "keywords": [
+        "派",
+        "甜",
+        "冰淇淋",
+        "麦旋风",
+        "麦炫酷",
+        "新地"
+      ],
+      "motto": "收集甜意，温柔入世。"
+    },
+    {
+      "key": "chicken",
+      "name": "脆羽山庄",
+      "symbol": "脆",
+      "keywords": [
+        "鸡",
+        "麦乐"
+      ],
+      "motto": "外脆内稳，行事有声。"
+    }
+  ],
+  "fallback_sect": {
+    "key": "wanderer",
+    "name": "逍遥门",
+    "symbol": "游",
+    "motto": "口味自在，不拘一格。"
+  }
+}

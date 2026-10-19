@@ -125,6 +125,9 @@ class MCPClient:
         if not isinstance(result, dict):
             return result
 
+        if result.get("isError"):
+            raise MCPError(f"MCP 工具 {name} 执行失败，请检查参数与账户状态。")
+
         structured = result.get("structuredContent")
         if isinstance(structured, (dict, list)) and structured:
             return structured

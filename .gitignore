@@ -5,6 +5,7 @@ __pycache__/
 venv/
 .env
 .env.*
+.env_*
 !.env.example
 .DS_Store
 .mypy_cache/
@@ -13,4 +14,12 @@ venv/
 out/
 *.html
 !examples/**/*.html
+!src/mcd_life_kit/templates/*.html
 .mcp_token
+mcd-token.env
+node_modules/
+# 人物生成素材、预览和中间文件暂不随代码提交
+assets/characters/
+tmp/
+temp/
+*.log
