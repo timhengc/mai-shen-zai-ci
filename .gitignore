@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+.DS_Store
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+out/
+*.html
+!examples/**/*.html
+.mcp_token
